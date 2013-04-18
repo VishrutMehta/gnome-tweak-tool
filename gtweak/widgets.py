@@ -113,13 +113,47 @@ class _GSettingsTweak(Tweak):
 
 class GSettingsSwitchTweak(_GSettingsTweak):
     def __init__(self, schema_name, key_name, **options):
+        global ALL_FLAG
         _GSettingsTweak.__init__(self, schema_name, key_name, **options)
 
         w = Gtk.Switch()
         self.settings.bind(key_name, w, "active", Gio.SettingsBindFlags.DEFAULT)
         self.widget = build_label_beside_widget(self.name, w)
+        try:
+            if ALL_FLAG == False:
+                w.props.active = False
+        except NameError:
+            pass
+        if key_name == "show-desktop-icons":
+            if w.props.active == False:
+                ALL_FLAG = False
+                w.connect("notify::active", self._check_status)
         # never change the size of a switch
         self.widget_for_size_group = None
+
+    def _change_status(self, schema_name, key_name, **options):
+        _GSettingsTweak.__init__(self, schema_name, key_name, **options)
+        w = Gtk.Switch()
+        self.settings.bind(key_name, w, "active", Gio.SettingsBindFlags.DEFAULT)
+        self.widget = build_label_beside_widget(self.settings.schema_get_summary(key_name), w)
+        try:
+            if self.TWEAK_DESKTOP_FLAG == False:
+                w.props.active = False
+        except AttributeError:
+            pass
+        if key_name == "show-desktop-icons":
+            w.connect("notify::active", self._check_status)
+        # never change the size of a switch
+        self.widget_for_size_group = None
+
+    def _check_status(self, btn, param):
+        self.TWEAK_DESKTOP_FLAG = btn.props.active
+        if self.TWEAK_DESKTOP_FLAG == False:
+            self._change_status("org.gnome.nautilus.desktop", "computer-icon-visible", group_name=TWEAK_GROUP_DESKTOP)
+            self._change_status("org.gnome.nautilus.desktop", "home-icon-visible", group_name=TWEAK_GROUP_DESKTOP)
+            self._change_status("org.gnome.nautilus.desktop", "network-icon-visible", group_name=TWEAK_GROUP_DESKTOP)
+            self._change_status("org.gnome.nautilus.desktop", "trash-icon-visible", group_name=TWEAK_GROUP_DESKTOP)
+            self._change_status("org.gnome.nautilus.desktop", "volumes-visible", group_name=TWEAK_GROUP_DESKTOP)
 
 class GSettingsFontButtonTweak(_GSettingsTweak):
     def __init__(self, schema_name, key_name, **options):
